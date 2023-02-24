@@ -4,112 +4,100 @@ Make a Kubernetes deployment strategy which contains an Azure function in python
 
 #### Answer
 
+To create a Kubernetes deployment strategy that includes an Azure Function written in Python which puts a message into an Azure Storage Queue every minute, you can follow these steps:
 
-- Create a Python Azure function to put a message to the Azure Storage Queue every minute. You can use the Azure SDK for Python to interact with Azure Storage Queue. Here's an example of the function code:
+- First, create an Azure Function App and a Storage Account in Azure.
+- In the Function App, create a new Function with an HTTP trigger and Python as the language.
+- Add the Python code that will put a message to the Azure Storage Queue every minute. 
+- Example:
 
 ```python
-import datetime
-import logging
-import os
 import azure.functions as func
+import datetime
+import os
 from azure.storage.queue import QueueClient
 
-def main(mytimer: func.TimerInput) -> None:
-    utc_timestamp = datetime.datetime.utcnow().replace(
-        tzinfo=datetime.timezone.utc).isoformat()
-    
-    # Connect to Azure Storage Queue
-    queue_client = QueueClient.from_connection_string(
-        os.environ["AzureWebJobsStorage"], "myqueue")
-    
-    # Add a message to the queue
-    message = "Hello from Azure Function at {}".format(utc_timestamp)
+def main(mytimer: func.TimerRequest) -> None:
+    utc_timestamp = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc).isoformat()
+
+    connection_string = os.environ['AzureWebJobsStorage']
+    queue_name = 'myqueue'
+
+    queue_client = QueueClient.from_connection_string(connection_string, queue_name)
+
+    message = 'Message created at: ' + utc_timestamp
+
     queue_client.send_message(message)
-    
-    logging.info('Python timer trigger function ran at %s', utc_timestamp)
 ```
 
-- Create a Docker container image that contains the service you want to run when a message is loaded from the queue. For this example, let's say the container runs a simple Python script that prints "Hello World". Here's an example Dockerfile:
-
+- Deploy the Azure Function to Azure using the Azure CLI or Azure Portal.
+- Next, create a Dockerfile that contains the necessary commands to prepare a container with a Python environment and the code that will run the Azure Function. 
+- Example Dockerfile:
 ```dockerfile
-FROM python:3.9
-COPY script.py .
-CMD ["python", "script.py"]
+FROM python:3.7-alpine
+WORKDIR /app
+COPY . .
+RUN pip install --no-cache-dir -r requirements.txt
+CMD ["python", "main.py"]
 ```
-
-- Create a Kubernetes deployment strategy that includes the two functions and the container service. Here's an example of the deployment YAML:
-
+- Build the Docker image and push it to a container registry, such as Azure Container Registry or Docker Hub.
+- Create a Kubernetes deployment file that specifies the Docker image to use, the deployment strategy, and the Kubernetes deployment configuration. 
+- Example Deployment file:
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: myapp
+  name: azure-function
+  labels:
+    app: azure-function
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: myapp
+      app: azure-function
   template:
     metadata:
       labels:
-        app: myapp
+        app: azure-function
     spec:
       containers:
-      - name: function-put
-        image: myfunctionput:latest
+      - name: azure-function
+        image: <your-container-registry>/<your-image-name>:<your-image-tag>
         env:
         - name: AzureWebJobsStorage
-          valueFrom:
-            secretKeyRef:
-              name: mysecrets
-              key: AzureWebJobsStorage
+          value: <your-storage-account-connection-string>
         resources:
-          requests:
-            cpu: 100m
-            memory: 128Mi
           limits:
-            cpu: 200m
-            memory: 256Mi
-      - name: function-load
-        image: myfunctionload:latest
-        env:
-        - name: AzureWebJobsStorage
-          valueFrom:
-            secretKeyRef:
-              name: mysecrets
-              key: AzureWebJobsStorage
-        - name: AzureFunctionsJobHost__functions__0
-          value: QueueTrigger
-        - name: AzureFunctionsJobHost__functions__0__type
-          value: queueTrigger
-        - name: AzureFunctionsJobHost__functions__0__direction
-          value: in
-        - name: AzureFunctionsJobHost__functions__0__queueName
-          value: myqueue
-        - name: AzureFunctionsJobHost__functions__0__connection
-          value: AzureWebJobsStorage
-        resources:
+            cpu: 0.5
+            memory: "256Mi"
           requests:
-            cpu: 100m
-            memory: 128Mi
-          limits:
-            cpu: 200m
-            memory: 256Mi
-      - name: container-service
-        image: mycontainerservice:latest
-        env:
-        - name: MESSAGE
-          value: "Hello World"
-        resources:
-          requests:
-            cpu: 100m
-            memory: 128Mi
-          limits:
-            cpu: 200m
-            memory: 256Mi
----
-apiVersion: v1
-kind: Service
-metadata:
+            cpu: 0.5
+            memory: "256Mi"
+```
+ - Apply the deployment file to the Kubernetes cluster using the kubectl command.
+ 
+ - To create the second Azure Function that loads a message from the queue and runs a prepared container service to print "Hello World", you can follow these steps:
+
+- Create a new Azure Function in the same Function App with a Queue trigger and Python as the language.
+- Add the Python code that will load a message from the queue and run a container service that prints "Hello World". 
+
+- Example:
+```python
+import os
+from azure.storage.queue import QueueClient
+import subprocess
+
+def main(msg: str) -> None:
+    connection_string = os.environ['AzureWebJobsStorage']
+    queue_name = 'myqueue'
+
+    queue_client = QueueClient.from_connection_string(connection_string, queue_name)
+
+    message = queue_client.receive_message()
+
+    container_image = '<your-container-registry>/<your-image-name>:<your-image-tag>'
+
+    subprocess.run(['docker', 'run', container_image, 'echo', 'Hello World!'])
 ```
 
+- Deploy the Azure Function to Azure using the Azure CLI or Azure Portal.
