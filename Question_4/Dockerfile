@@ -1,3 +1,5 @@
-FROM python:3.9
-COPY script.py .
-CMD ["python", "script.py"]
+FROM python:3.7-alpine
+WORKDIR /app
+COPY . .
+RUN pip install --no-cache-dir -r requirements.txt
+CMD ["python", "main.py"]
