@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-blue
+  labels:
+    app: myapp
+    env: blue
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: myapp
+      env: blue
+  template:
+    metadata:
+      labels:
+        app: myapp
+        env: blue
+    spec:
+      containers:
+      - name: myapp
+        image: myapp:blue
+        ports:
+        - containerPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-green
+  labels:
+    app: myapp
+    env: green
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: myapp
+      env: green
+  template:
+    metadata:
+      labels:
+        app: myapp
+        env: green
+    spec:
+      containers:
+      - name: myapp
+        image: myapp:green
+        ports:
+        - containerPort: 80
