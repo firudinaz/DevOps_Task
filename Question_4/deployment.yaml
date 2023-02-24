@@ -1,72 +1,29 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: myapp
+  name: azure-function
+  labels:
+    app: azure-function
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: myapp
+      app: azure-function
   template:
     metadata:
       labels:
-        app: myapp
+        app: azure-function
     spec:
       containers:
-      - name: function-put
-        image: myfunctionput:latest
+      - name: azure-function
+        image: <your-container-registry>/<your-image-name>:<your-image-tag>
         env:
         - name: AzureWebJobsStorage
-          valueFrom:
-            secretKeyRef:
-              name: mysecrets
-              key: AzureWebJobsStorage
+          value: <your-storage-account-connection-string>
         resources:
-          requests:
-            cpu: 100m
-            memory: 128Mi
           limits:
-            cpu: 200m
-            memory: 256Mi
-      - name: function-load
-        image: myfunctionload:latest
-        env:
-        - name: AzureWebJobsStorage
-          valueFrom:
-            secretKeyRef:
-              name: mysecrets
-              key: AzureWebJobsStorage
-        - name: AzureFunctionsJobHost__functions__0
-          value: QueueTrigger
-        - name: AzureFunctionsJobHost__functions__0__type
-          value: queueTrigger
-        - name: AzureFunctionsJobHost__functions__0__direction
-          value: in
-        - name: AzureFunctionsJobHost__functions__0__queueName
-          value: myqueue
-        - name: AzureFunctionsJobHost__functions__0__connection
-          value: AzureWebJobsStorage
-        resources:
+            cpu: 0.5
+            memory: "256Mi"
           requests:
-            cpu: 100m
-            memory: 128Mi
-          limits:
-            cpu: 200m
-            memory: 256Mi
-      - name: container-service
-        image: mycontainerservice:latest
-        env:
-        - name: MESSAGE
-          value: "Hello World"
-        resources:
-          requests:
-            cpu: 100m
-            memory: 128Mi
-          limits:
-            cpu: 200m
-            memory: 256Mi
----
-apiVersion: v1
-kind: Service
-metadata:
- 
+            cpu: 0.5
+            memory: "256Mi"
